@@ -14,5 +14,7 @@ public sealed class AppUser : IdentityUser
 
     //Navigation Properties
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public ICollection<UserSkill> Skills { get; set; } = new List<UserSkill>();
+    public ICollection<Company> Companies { get; set; } = new List<Company>();
 }
 

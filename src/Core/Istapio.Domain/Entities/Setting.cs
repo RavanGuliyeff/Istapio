@@ -8,3 +8,4 @@ public class Setting : BaseAuditableEntity
     public string Value { get; set; } = string.Empty;
 }
 
+

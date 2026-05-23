@@ -1,4 +1,4 @@
-﻿using Istapio.Domain.Entities;
+using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces;
 using Istapio.Domain.Interfaces.Repositories;
 using Istapio.Persistence.Contexts;
@@ -6,9 +6,9 @@ using Istapio.Persistence.Implementations.Generics;
 
 namespace Istapio.Persistence.Implementations.Repositories;
 
-public sealed class SettingRepository : AuditableRepository<Setting>, ISettingRepository
+public sealed class JobPostRepository : AuditableRepository<JobPost>, IJobPostRepository
 {
-    public SettingRepository(AppDbContext context, ICurrentUserService currentUserService)
+    public JobPostRepository(AppDbContext context, ICurrentUserService currentUserService)
         : base(context, currentUserService)
     {
     }

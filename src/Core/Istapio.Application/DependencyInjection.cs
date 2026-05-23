@@ -2,16 +2,22 @@
 using Microsoft.Extensions.DependencyInjection;
 using Istapio.Domain.Interfaces;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 namespace Istapio.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-        services.AddAutoMapper(assembly);
+        //services.AddAutoMapper(assembly);
+
+        var licenseKey = configuration["AutoMapper:LicenseKey"];
+
+        services.AddAutoMapper(cfg => cfg.LicenseKey = licenseKey,
+            Assembly.GetExecutingAssembly());
 
         services.AddValidatorsFromAssembly(assembly);
 

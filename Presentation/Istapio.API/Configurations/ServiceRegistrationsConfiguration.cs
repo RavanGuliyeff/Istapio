@@ -8,7 +8,7 @@ namespace Istapio.API.Configurations
     {
         public static IServiceCollection AddLayeredServices(this IServiceCollection services, IConfiguration configuration)
         {
-            services.AddApplication();
+            services.AddApplication(configuration);
             services.AddPersistence(configuration);
             services.AddInfrastructure(configuration);
 

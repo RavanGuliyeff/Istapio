@@ -21,7 +21,15 @@ public class AppDbContext : IdentityDbContext<AppUser>
     }
 
     // DbSets
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Company> Companies => Set<Company>();
+    public DbSet<JobPost> JobPosts => Set<JobPost>();
+    public DbSet<JobPostSkill> JobPostSkills => Set<JobPostSkill>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Setting> Settings => Set<Setting>();
+    public DbSet<Skill> Skills => Set<Skill>();
+    public DbSet<UserSkill> UserSkills => Set<UserSkill>();
+    public DbSet<VacationType> VacationTypes => Set<VacationType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
