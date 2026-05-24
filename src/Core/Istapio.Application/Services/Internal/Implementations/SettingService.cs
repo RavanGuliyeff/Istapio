@@ -2,7 +2,8 @@
 using Istapio.Application.Models.DTOs.Setting;
 using Istapio.Application.Services.Internal.Interfaces;
 using Istapio.Domain.Entities;
-using Istapio.Domain.Interfaces.Repositories.Generics;
+using Istapio.Domain.Interfaces.Repositories;
+//using Istapio.Domain.Interfaces.Repositories.Generics;
 
 namespace Istapio.Application.Services.Internal.Implementations;
 
