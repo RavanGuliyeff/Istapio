@@ -1,0 +1,19 @@
+services:
+  api:
+    image: istapio.api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: istapio-api
+    restart: always
+    ports:
+      - "1011:8080"
+    networks:
+      - proxy-network
+      - db-network
+
+networks:
+  proxy-network:
+    external: true
+  db-network:
+    external: true
