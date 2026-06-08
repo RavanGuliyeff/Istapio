@@ -42,6 +42,10 @@ public class VacationTypeService : IVacationTypeService
 
     public async Task<GetVacationTypeDto> CreateAsync(CreateVacationTypeDto dto)
     {
+        // Check if vacation type with same name already exists (uniqueness constraint, like Setting.Key)
+        if (await _repository.AnyAsync(v => v.Name == dto.Name))
+            throw new ConflictException($"Vacation type with name '{dto.Name}' already exists");
+
         VacationType entity = new VacationType
         {
             Name = dto.Name
@@ -58,6 +62,10 @@ public class VacationTypeService : IVacationTypeService
         VacationType? entity = await _repository.GetByIdAsync(dto.Id, enableTracking: true);
         if (entity == null)
             throw new NotFoundException(nameof(VacationType), dto.Id);
+
+        // Check if name is being changed to a name that already exists
+        if (entity.Name != dto.Name && await _repository.AnyAsync(v => v.Name == dto.Name))
+            throw new ConflictException($"Vacation type with name '{dto.Name}' already exists");
 
         entity.Name = dto.Name;
 

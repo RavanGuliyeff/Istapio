@@ -42,6 +42,10 @@ public class SkillService : ISkillService
 
     public async Task<GetSkillDto> CreateAsync(CreateSkillDto dto)
     {
+        // Check if skill with same name already exists (uniqueness constraint, like Setting.Key)
+        if (await _repository.AnyAsync(s => s.Name == dto.Name))
+            throw new ConflictException($"Skill with name '{dto.Name}' already exists");
+
         Skill entity = new Skill
         {
             Name = dto.Name
@@ -58,6 +62,10 @@ public class SkillService : ISkillService
         Skill? entity = await _repository.GetByIdAsync(dto.Id, enableTracking: true);
         if (entity == null)
             throw new NotFoundException(nameof(Skill), dto.Id);
+
+        // Check if name is being changed to a name that already exists
+        if (entity.Name != dto.Name && await _repository.AnyAsync(s => s.Name == dto.Name))
+            throw new ConflictException($"Skill with name '{dto.Name}' already exists");
 
         entity.Name = dto.Name;
 

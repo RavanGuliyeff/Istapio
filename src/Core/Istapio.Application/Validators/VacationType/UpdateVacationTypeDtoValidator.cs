@@ -12,6 +12,7 @@ public class UpdateVacationTypeDtoValidator : AbstractValidator<UpdateVacationTy
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Name is required")
-            .MaximumLength(100).WithMessage("Name must not exceed 100 characters");
+            .MaximumLength(100).WithMessage("Name must not exceed 100 characters")
+            .Must(x => !string.IsNullOrWhiteSpace(x)).WithMessage("Name cannot be empty or whitespace");
     }
 }

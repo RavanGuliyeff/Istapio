@@ -42,12 +42,20 @@ public class CompanyService : ICompanyService
 
     public async Task<GetCompanyDto> CreateAsync(CreateCompanyDto dto)
     {
+        // Validate that UserId is provided (required foreign key reference)
+        if (string.IsNullOrWhiteSpace(dto.UserId))
+            throw new ValidationException("UserId is required");
+
+        // Check if company with same name for this user already exists (business rule: unique per user)
+        if (await _repository.AnyAsync(c => c.Name == dto.Name && c.UserId == dto.UserId))
+            throw new ConflictException($"Company with name '{dto.Name}' already exists for this user");
+
         Company entity = new Company
         {
             Name = dto.Name,
             Description = dto.Description,
             LogoUrl = dto.LogoUrl,
-            UserId = dto.UserId ?? string.Empty
+            UserId = dto.UserId
         };
 
         await _repository.AddAsync(entity);
@@ -61,6 +69,11 @@ public class CompanyService : ICompanyService
         Company? entity = await _repository.GetByIdAsync(dto.Id, enableTracking: true);
         if (entity == null)
             throw new NotFoundException(nameof(Company), dto.Id);
+
+        // Check if name is being changed to a name that already exists for this user
+        if (entity.Name != dto.Name && 
+            await _repository.AnyAsync(c => c.Name == dto.Name && c.UserId == entity.UserId))
+            throw new ConflictException($"Company with name '{dto.Name}' already exists for this user");
 
         entity.Name = dto.Name;
         entity.Description = dto.Description;

@@ -9,10 +9,17 @@ namespace Istapio.Application.Services.Internal.Implementations;
 public class JobPostService : IJobPostService
 {
     private readonly IJobPostRepository _repository;
+    private readonly ICompanyRepository _companyRepository;
+    private readonly ICategoryRepository _categoryRepository;
 
-    public JobPostService(IJobPostRepository repository)
+    public JobPostService(
+        IJobPostRepository repository,
+        ICompanyRepository companyRepository,
+        ICategoryRepository categoryRepository)
     {
         _repository = repository;
+        _companyRepository = companyRepository;
+        _categoryRepository = categoryRepository;
     }
 
     public async Task<GetJobPostDto?> GetByIdAsync(Guid id)
@@ -42,6 +49,24 @@ public class JobPostService : IJobPostService
 
     public async Task<GetJobPostDto> CreateAsync(CreateJobPostDto dto)
     {
+        // Validate that Company exists
+        var company = await _companyRepository.GetByIdAsync(dto.CompanyId);
+        if (company == null)
+            throw new NotFoundException(nameof(Company), dto.CompanyId);
+
+        // Validate that Category exists
+        var category = await _categoryRepository.GetByIdAsync(dto.CategoryId);
+        if (category == null)
+            throw new NotFoundException(nameof(Category), dto.CategoryId);
+
+        // Check if job post with same title for this company already exists (business rule: unique per company)
+        if (await _repository.AnyAsync(j => j.Title == dto.Title && j.CompanyId == dto.CompanyId))
+            throw new ConflictException($"Job post with title '{dto.Title}' already exists for this company");
+
+        // Validate LastDate if provided
+        if (dto.LastDate.HasValue && dto.LastDate <= DateTime.UtcNow)
+            throw new ValidationException("LastDate must be in the future");
+
         JobPost entity = new JobPost
         {
             Title = dto.Title,
@@ -65,6 +90,20 @@ public class JobPostService : IJobPostService
         JobPost? entity = await _repository.GetByIdAsync(dto.Id, enableTracking: true);
         if (entity == null)
             throw new NotFoundException(nameof(JobPost), dto.Id);
+
+        // Validate that Category exists
+        var category = await _categoryRepository.GetByIdAsync(dto.CategoryId);
+        if (category == null)
+            throw new NotFoundException(nameof(Category), dto.CategoryId);
+
+        // Check if title is being changed to a title that already exists for this company
+        if (entity.Title != dto.Title && 
+            await _repository.AnyAsync(j => j.Title == dto.Title && j.CompanyId == entity.CompanyId))
+            throw new ConflictException($"Job post with title '{dto.Title}' already exists for this company");
+
+        // Validate LastDate if provided
+        if (dto.LastDate.HasValue && dto.LastDate <= DateTime.UtcNow)
+            throw new ValidationException("LastDate must be in the future");
 
         entity.Title = dto.Title;
         entity.Description = dto.Description;

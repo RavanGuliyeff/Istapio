@@ -42,6 +42,18 @@ public class CategoryService : ICategoryService
 
     public async Task<GetCategoryDto> CreateAsync(CreateCategoryDto dto)
     {
+        // Check if category with same name already exists (uniqueness constraint)
+        if (await _repository.AnyAsync(c => c.Name == dto.Name))
+            throw new ConflictException($"Category with name '{dto.Name}' already exists");
+
+        // If ParentId is provided, validate that parent category exists
+        if (dto.ParentId.HasValue)
+        {
+            var parentCategory = await _repository.GetByIdAsync(dto.ParentId.Value);
+            if (parentCategory == null)
+                throw new NotFoundException(nameof(Category), dto.ParentId.Value);
+        }
+
         Category entity = new Category
         {
             Name = dto.Name,
@@ -59,6 +71,22 @@ public class CategoryService : ICategoryService
         Category? entity = await _repository.GetByIdAsync(dto.Id, enableTracking: true);
         if (entity == null)
             throw new NotFoundException(nameof(Category), dto.Id);
+
+        // Check if name is being changed to a name that already exists
+        if (entity.Name != dto.Name && await _repository.AnyAsync(c => c.Name == dto.Name))
+            throw new ConflictException($"Category with name '{dto.Name}' already exists");
+
+        // If ParentId is being changed, validate the new parent exists
+        if (dto.ParentId.HasValue && dto.ParentId != entity.ParentId)
+        {
+            var parentCategory = await _repository.GetByIdAsync(dto.ParentId.Value);
+            if (parentCategory == null)
+                throw new NotFoundException(nameof(Category), dto.ParentId.Value);
+
+            // Prevent circular parent-child relationship (a category cannot be its own ancestor)
+            if (dto.ParentId == entity.Id)
+                throw new ConflictException("A category cannot be its own parent");
+        }
 
         entity.Name = dto.Name;
         entity.ParentId = dto.ParentId;
