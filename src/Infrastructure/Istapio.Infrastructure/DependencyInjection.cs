@@ -12,28 +12,32 @@ public static class DependencyInjection
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-                RegisterRepositories(services, assembly);
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("Redis");
+        });
 
+        RegisterServices(services, assembly);
         return services;
     }
 
-    private static void RegisterRepositories(IServiceCollection services, Assembly assembly)
+    private static void RegisterServices(IServiceCollection services, Assembly assembly)
     {
-        var repositoryTypes = assembly.GetTypes()
+        var serviceTypes = assembly.GetTypes()
             .Where(t => t.IsClass
                      && !t.IsAbstract
                      && t.Name.EndsWith("Service")
                      && t.Namespace?.Contains("Services") == true)
             .ToList();
 
-        foreach (var repositoryType in repositoryTypes)
+        foreach (var serviceType in serviceTypes)
         {
-            var interfaceType = repositoryType.GetInterfaces()
-                .FirstOrDefault(i => i.Name == $"I{repositoryType.Name}");
+            var interfaceType = serviceType.GetInterfaces()
+                .FirstOrDefault(i => i.Name == $"I{serviceType.Name}");
 
             if (interfaceType != null)
             {
-                services.AddScoped(interfaceType, repositoryType);
+                services.AddScoped(interfaceType, serviceType);
             }
         }
     }

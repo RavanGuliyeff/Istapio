@@ -14,7 +14,7 @@ public interface ISettingService
     // Command
     Task<GetSettingDto> CreateAsync(CreateSettingDto dto);
     Task<GetSettingDto> UpdateAsync(UpdateSettingDto dto);
-    Task<GetSettingDto> UpdateByKeyAsync(UpdateSettingDto dto);
+    //Task<GetSettingDto> UpdateByKeyAsync(UpdateSettingDto dto);
     Task DeleteAsync(Guid id);
     Task DeleteByKeyAsync(string key);
 
