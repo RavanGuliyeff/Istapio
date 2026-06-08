@@ -123,27 +123,27 @@ public class SettingsController : BaseController
         return Success(setting, "Setting updated successfully");
     }
 
-    /// <summary>
-    /// Updates an existing setting by its key
-    /// </summary>
-    /// <param name="key">The unique key of the setting</param>
-    /// <param name="dto">The updated setting data</param>
-    /// <returns>The updated setting</returns>
-    /// <response code="200">Returns the updated setting</response>
-    /// <response code="400">If the key in route doesn't match the key in body</response>
-    /// <response code="404">If the setting is not found</response>
-    [HttpPut("by-key/{key}")]
-    [ProducesResponseType(typeof(GetSettingDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateByKey(string key, [FromBody] UpdateSettingDto dto)
-    {
-        if (key != dto.Key)
-            return BadRequest("Key mismatch");
+    ///// <summary>
+    ///// Updates an existing setting by its key
+    ///// </summary>
+    ///// <param name="key">The unique key of the setting</param>
+    ///// <param name="dto">The updated setting data</param>
+    ///// <returns>The updated setting</returns>
+    ///// <response code="200">Returns the updated setting</response>
+    ///// <response code="400">If the key in route doesn't match the key in body</response>
+    ///// <response code="404">If the setting is not found</response>
+    //[HttpPut("by-key/{key}")]
+    //[ProducesResponseType(typeof(GetSettingDto), StatusCodes.Status200OK)]
+    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+    //[ProducesResponseType(StatusCodes.Status404NotFound)]
+    //public async Task<IActionResult> UpdateByKey(string key, [FromBody] UpdateSettingDto dto)
+    //{
+    //    if (key != dto.Key)
+    //        return BadRequest("Key mismatch");
 
-        var setting = await _settingService.UpdateByKeyAsync(dto);
-        return Success(setting, "Setting updated successfully");
-    }
+    //    var setting = await _settingService.UpdateByKeyAsync(dto);
+    //    return Success(setting, "Setting updated successfully");
+    //}
 
     /// <summary>
     /// Soft deletes a setting by its identifier
