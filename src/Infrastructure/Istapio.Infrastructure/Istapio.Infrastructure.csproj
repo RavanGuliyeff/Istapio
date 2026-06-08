@@ -14,4 +14,8 @@
     <Folder Include="Services\External\Implementations\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.27" />
+  </ItemGroup>
+
 </Project>
