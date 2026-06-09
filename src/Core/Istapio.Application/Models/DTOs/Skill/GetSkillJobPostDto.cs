@@ -1,6 +1,7 @@
 namespace Istapio.Application.Models.DTOs.Skill;
 
-public record GetSkillDto(
+public record GetSkillJobPostDto(
     Guid Id,
-    string Name
+    string JobPostTitle
+
 );

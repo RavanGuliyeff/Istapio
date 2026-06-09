@@ -83,6 +83,23 @@ public class JobPostsController : BaseController
         return Created(jobPost, "Job post created successfully");
     }
 
+
+    /// <summary>
+    /// Increments the view count of a job post
+    /// </summary>
+    /// <param name="id">The unique identifier of the job post</param>
+    /// <returns>No content</returns>
+    /// <response code="204">View count incremented successfully</response>
+    /// <response code="404">If the job post is not found</response>
+    [HttpPost("{id:guid}/view")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> IncrementView(Guid id)
+    {
+        await _jobPostService.IncrementViewCountAsync(id);
+        return NoContent();
+    }
+
     /// <summary>
     /// Updates an existing job post by its identifier
     /// </summary>

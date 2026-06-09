@@ -31,7 +31,7 @@ public class SkillsController : BaseController
     /// <response code="200">Returns the skill</response>
     /// <response code="404">If the skill is not found</response>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(GetSkillDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(GetSkillDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
