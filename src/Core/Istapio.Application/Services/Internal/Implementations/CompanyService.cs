@@ -1,5 +1,6 @@
 using Istapio.Application.Exceptions;
 using Istapio.Application.Models.DTOs.Company;
+using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
@@ -9,44 +10,53 @@ namespace Istapio.Application.Services.Internal.Implementations;
 public class CompanyService : ICompanyService
 {
     private readonly ICompanyRepository _repository;
+    private readonly ICacheService _cache;
 
-    public CompanyService(ICompanyRepository repository)
+    private static string CacheKey(Guid id) => $"company:id:{id}";
+    private const string AllCacheKey = "companies:all";
+
+    public CompanyService(ICompanyRepository repository, ICacheService cache)
     {
         _repository = repository;
+        _cache = cache;
     }
 
     public async Task<GetCompanyDto?> GetByIdAsync(Guid id)
     {
+        var cached = await _cache.GetAsync<GetCompanyDto>(CacheKey(id));
+        if (cached is not null) return cached;
+
         var company = await _repository.GetByIdAsync(id);
         if (company == null)
             throw new NotFoundException(nameof(Company), id);
 
-        return Map(company);
+        var dto = Map(company);
+        await _cache.SetAsync(CacheKey(id), dto, TimeSpan.FromMinutes(30));
+        return dto;
     }
 
     public async Task<List<GetCompanyDto>> GetAllAsync()
     {
+        var cached = await _cache.GetAsync<List<GetCompanyDto>>(AllCacheKey);
+        if (cached is not null) return cached;
+
         var list = await _repository.GetAllAsync();
-        return list.Select(Map).ToList();
+        var dtos = list.Select(Map).ToList();
+        await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(30));
+        return dtos;
     }
 
     public async Task<(List<GetCompanyDto> Items, int TotalCount)> GetPagedAsync(int pageIndex = 1, int pageSize = 10)
     {
-        var (items, total) = await _repository.GetPagedAsync(
-            pageIndex: pageIndex,
-            pageSize: pageSize
-        );
-        var dtos = items.Select(Map).ToList();
-        return (dtos, total);
+        var (items, total) = await _repository.GetPagedAsync(pageIndex: pageIndex, pageSize: pageSize);
+        return (items.Select(Map).ToList(), total);
     }
 
     public async Task<GetCompanyDto> CreateAsync(CreateCompanyDto dto)
     {
-        // Validate that UserId is provided (required foreign key reference)
         if (string.IsNullOrWhiteSpace(dto.UserId))
             throw new ValidationException("UserId is required");
 
-        // Check if company with same name for this user already exists (business rule: unique per user)
         if (await _repository.AnyAsync(c => c.Name == dto.Name && c.UserId == dto.UserId))
             throw new ConflictException($"Company with name '{dto.Name}' already exists for this user");
 
@@ -61,6 +71,7 @@ public class CompanyService : ICompanyService
         await _repository.AddAsync(entity);
         await _repository.SaveChangesAsync();
 
+        await _cache.RemoveAsync(AllCacheKey);
         return Map(entity);
     }
 
@@ -70,8 +81,7 @@ public class CompanyService : ICompanyService
         if (entity == null)
             throw new NotFoundException(nameof(Company), dto.Id);
 
-        // Check if name is being changed to a name that already exists for this user
-        if (entity.Name != dto.Name && 
+        if (entity.Name != dto.Name &&
             await _repository.AnyAsync(c => c.Name == dto.Name && c.UserId == entity.UserId))
             throw new ConflictException($"Company with name '{dto.Name}' already exists for this user");
 
@@ -83,6 +93,8 @@ public class CompanyService : ICompanyService
         _repository.Update(entity);
         await _repository.SaveChangesAsync();
 
+        await _cache.RemoveAsync(CacheKey(entity.Id));
+        await _cache.RemoveAsync(AllCacheKey);
         return Map(entity);
     }
 
@@ -94,18 +106,12 @@ public class CompanyService : ICompanyService
 
         await _repository.SoftDeleteAsync(id);
         await _repository.SaveChangesAsync();
+
+        await _cache.RemoveAsync(CacheKey(id));
+        await _cache.RemoveAsync(AllCacheKey);
     }
 
     private static GetCompanyDto Map(Company c)
-        => new GetCompanyDto(
-            c.Id,
-            c.Name,
-            c.Description,
-            c.LogoUrl,
-            c.UserId,
-            c.CreatedAt,
-            c.CreatedBy,
-            c.UpdatedAt,
-            c.UpdatedBy
-        );
+        => new(c.Id, c.Name, c.Description, c.LogoUrl, c.UserId,
+               c.CreatedAt, c.CreatedBy, c.UpdatedAt, c.UpdatedBy);
 }
