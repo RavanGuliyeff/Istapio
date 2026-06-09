@@ -4,6 +4,7 @@ using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Istapio.Application.Services.Internal.Implementations;
 
@@ -21,16 +22,21 @@ public class CompanyService : ICompanyService
         _cache = cache;
     }
 
-    public async Task<GetCompanyDto?> GetByIdAsync(Guid id)
+    public async Task<GetCompanyDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetCompanyDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetCompanyDetailsDto>(CacheKey(id));
         if (cached is not null) return cached;
 
-        var company = await _repository.GetByIdAsync(id);
+        var company = await _repository.GetByIdAsync(id,
+            include: c => c
+            .Include(c => c.User)
+            .Include(c => c.JobPosts)
+            .ThenInclude(jp => jp.Category));
+
         if (company == null)
             throw new NotFoundException(nameof(Company), id);
 
-        var dto = Map(company);
+        var dto = MapToDetailsDto(company);
         await _cache.SetAsync(CacheKey(id), dto, TimeSpan.FromMinutes(30));
         return dto;
     }
@@ -40,16 +46,21 @@ public class CompanyService : ICompanyService
         var cached = await _cache.GetAsync<List<GetCompanyDto>>(AllCacheKey);
         if (cached is not null) return cached;
 
-        var list = await _repository.GetAllAsync();
-        var dtos = list.Select(Map).ToList();
+        var list = await _repository.GetAllAsync(include: c => c
+            .Include(c => c.User));
+        var dtos = list.Select(MapToDto).ToList();
         await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(30));
         return dtos;
     }
 
     public async Task<(List<GetCompanyDto> Items, int TotalCount)> GetPagedAsync(int pageIndex = 1, int pageSize = 10)
     {
-        var (items, total) = await _repository.GetPagedAsync(pageIndex: pageIndex, pageSize: pageSize);
-        return (items.Select(Map).ToList(), total);
+        var (items, total) = await _repository.GetPagedAsync(
+            pageIndex: pageIndex,
+            pageSize: pageSize,
+            include: c => c
+            .Include(c => c.User));
+        return (items.Select(MapToDto).ToList(), total);
     }
 
     public async Task<GetCompanyDto> CreateAsync(CreateCompanyDto dto)
@@ -72,7 +83,7 @@ public class CompanyService : ICompanyService
         await _repository.SaveChangesAsync();
 
         await _cache.RemoveAsync(AllCacheKey);
-        return Map(entity);
+        return MapToDto(entity);
     }
 
     public async Task<GetCompanyDto> UpdateAsync(UpdateCompanyDto dto)
@@ -95,7 +106,7 @@ public class CompanyService : ICompanyService
 
         await _cache.RemoveAsync(CacheKey(entity.Id));
         await _cache.RemoveAsync(AllCacheKey);
-        return Map(entity);
+        return MapToDto(entity);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -111,7 +122,33 @@ public class CompanyService : ICompanyService
         await _cache.RemoveAsync(AllCacheKey);
     }
 
-    private static GetCompanyDto Map(Company c)
-        => new(c.Id, c.Name, c.Description, c.LogoUrl, c.UserId,
-               c.CreatedAt, c.CreatedBy, c.UpdatedAt, c.UpdatedBy);
+    private static GetCompanyDto MapToDto(Company c)
+    => new(
+        Id: c.Id,
+        Name: c.Name,
+        LogoUrl: c.LogoUrl,
+        UserId: c.UserId,
+        UserName: c.User?.UserName ?? "Unknown"
+    );
+    private static GetCompanyDetailsDto MapToDetailsDto(Company c)
+    => new(
+        Id: c.Id,
+        Name: c.Name,
+        Description: c.Description,
+        LogoUrl: c.LogoUrl,
+        UserId: c.UserId,
+        UserName: c.User.UserName!,
+        JobPosts: c.JobPosts.Select(j => new GetCompanyJobPostDto(
+            Id: j.Id,
+            Title: j.Title,
+            CategoryId: j.CategoryId,
+            CategoryName: j.Category.Name,
+            IsActive: j.IsActive,
+            ViewCount: j.ViewCount
+        )).ToList(),
+        CreatedAt: c.CreatedAt,
+        CreatedBy: c.CreatedBy,
+        UpdatedAt: c.UpdatedAt,
+        UpdatedBy: c.UpdatedBy
+    );
 }

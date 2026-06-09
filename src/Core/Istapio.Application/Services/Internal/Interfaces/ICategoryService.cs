@@ -5,7 +5,7 @@ namespace Istapio.Application.Services.Internal.Interfaces;
 public interface ICategoryService
 {
     // Query
-    Task<GetCategoryDto?> GetByIdAsync(Guid id);
+    Task<GetCategoryDetailsDto> GetByIdAsync(Guid id);
     Task<List<GetCategoryDto>> GetAllAsync();
     Task<(List<GetCategoryDto> Items, int TotalCount)> GetPagedAsync(int pageIndex = 1, int pageSize = 10);
 

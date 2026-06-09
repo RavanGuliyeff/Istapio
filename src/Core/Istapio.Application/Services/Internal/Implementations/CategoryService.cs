@@ -24,17 +24,20 @@ public class CategoryService : ICategoryService
         _cache = cache;
     }
 
-    public async Task<GetCategoryDto?> GetByIdAsync(Guid id)
+    public async Task<GetCategoryDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetCategoryDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetCategoryDetailsDto>(CacheKey(id));
         if (cached is not null)
             return cached;
 
-        var category = await _repository.GetByIdAsync(id, include: c => c.Include(x => x.SubCategories));
+        var category = await _repository.GetByIdAsync(id,
+            include: c => c
+            .Include(x => x.SubCategories)
+            .Include(x => x.JobPosts));
         if (category == null)
             throw new NotFoundException(nameof(Category), id);
 
-        var dto = Map(category);
+        var dto = MapToDetailsDto(category);
 
         await _cache.SetAsync(
             CacheKey(id),
@@ -51,7 +54,7 @@ public class CategoryService : ICategoryService
             return cached;
 
         var list = await _repository.GetAllAsync(include: c => c.Include(x => x.SubCategories));
-        var dtos = list.Select(Map).ToList();
+        var dtos = list.Select(MapToDto).ToList();
 
         await _cache.SetAsync(
             AllCategoriesCacheKey,
@@ -67,11 +70,11 @@ public class CategoryService : ICategoryService
     {
         var (items, total) = await _repository.GetPagedAsync(
             pageIndex: pageIndex,
-            pageSize: pageSize, 
+            pageSize: pageSize,
             include: c => c.Include(x => x.SubCategories)
         );
 
-        var dtos = items.Select(Map).ToList();
+        var dtos = items.Select(MapToDto).ToList();
 
         return (dtos, total);
     }
@@ -104,7 +107,7 @@ public class CategoryService : ICategoryService
 
         await _cache.RemoveAsync(AllCategoriesCacheKey);
 
-        return Map(entity);
+        return MapToDto(entity);
     }
 
     public async Task<GetCategoryDto> UpdateAsync(UpdateCategoryDto dto)
@@ -145,7 +148,7 @@ public class CategoryService : ICategoryService
         await _cache.RemoveAsync(CacheKey(entity.Id));
         await _cache.RemoveAsync(AllCategoriesCacheKey);
 
-        return Map(entity);
+        return MapToDto(entity);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -170,11 +173,28 @@ public class CategoryService : ICategoryService
         await _cache.RemoveAsync(AllCategoriesCacheKey);
     }
 
-    private static GetCategoryDto Map(Category c)
+    private static GetCategoryDto MapToDto(Category c)
         => new(
-            c.Id,
-            c.Name,
-            c.ParentId,
-            c.SubCategories.Select(Map).ToList() ?? new List<GetCategoryDto>()
+            Id: c.Id,
+            Name: c.Name,
+            ParentId: c.ParentId,
+            SubCategories: c.SubCategories.Select(MapToDto).ToList() ?? new List<GetCategoryDto>()
         );
+    private static GetCategoryDetailsDto MapToDetailsDto(Category c)
+        => new(
+            Id: c.Id,
+            Name: c.Name,
+            JobPostsCount: c.JobPosts?.Count ?? 0,
+            ParentId: c.ParentId,
+            SubCategories: c.SubCategories.Select(MapToDto).ToList() ?? new List<GetCategoryDto>(),
+            JobPosts: c.JobPosts!.Select(jp => new GetCategoryJobPostDto(
+                Id: jp.Id,
+                Title: jp.Title,
+                CompanyId: jp.CompanyId,
+                CompanyName: jp.Company.Name,
+                IsActive: jp.IsActive,
+                ViewCount: jp.ViewCount
+                )).ToList() ?? new List<GetCategoryJobPostDto>()
+           );
+
 }

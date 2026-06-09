@@ -5,7 +5,7 @@ namespace Istapio.Application.Services.Internal.Interfaces;
 public interface ISkillService
 {
     // Query
-    Task<GetSkillDto?> GetByIdAsync(Guid id);
+    Task<GetSkillDetailsDto> GetByIdAsync(Guid id);
     Task<List<GetSkillDto>> GetAllAsync();
     Task<(List<GetSkillDto> Items, int TotalCount)> GetPagedAsync(int pageIndex = 1, int pageSize = 10);
 
