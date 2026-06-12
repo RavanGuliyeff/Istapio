@@ -31,7 +31,10 @@ public class CompanyService : ICompanyService
             include: c => c
             .Include(c => c.User)
             .Include(c => c.JobPosts)
-            .ThenInclude(jp => jp.Category));
+                .ThenInclude(jp => jp.Category)
+            .Include(c => c.JobPosts)
+                .ThenInclude(jp => jp.VacationType)
+            );
 
         if (company == null)
             throw new NotFoundException(nameof(Company), id);
@@ -143,6 +146,8 @@ public class CompanyService : ICompanyService
             Title: j.Title,
             CategoryId: j.CategoryId,
             CategoryName: j.Category.Name,
+            VacationTypeId: j.VacationTypeId,
+            VacationTypeName: j.VacationType.Name,
             IsActive: j.IsActive,
             ViewCount: j.ViewCount
         )).ToList(),

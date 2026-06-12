@@ -9,5 +9,6 @@ public record UpdateJobPostDto(
     string Requirements,
     bool IsActive,
     DateTime? LastDate,
-    Guid CategoryId
+    Guid CategoryId,
+    Guid VacationTypeId
 ) : BaseDto(Id);

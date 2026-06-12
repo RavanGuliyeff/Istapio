@@ -4,6 +4,7 @@ using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Istapio.Application.Services.Internal.Implementations;
 
@@ -21,16 +22,23 @@ public class VacationTypeService : IVacationTypeService
         _cache = cache;
     }
 
-    public async Task<GetVacationTypeDto?> GetByIdAsync(Guid id)
+    public async Task<GetVacationTypeDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetVacationTypeDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetVacationTypeDetailsDto>(CacheKey(id));
         if (cached is not null) return cached;
 
-        var vacationType = await _repository.GetByIdAsync(id);
+        var vacationType = await _repository.GetByIdAsync(id, 
+            include: vt => vt
+            .Include(v => v.JobPosts)
+                .ThenInclude(j => j.Company)
+            .Include(v => v.JobPosts)
+                .ThenInclude(j => j.Category)
+            );
+
         if (vacationType == null)
             throw new NotFoundException(nameof(VacationType), id);
 
-        var dto = Map(vacationType);
+        var dto = MapToDetailsDto(vacationType);
         await _cache.SetAsync(CacheKey(id), dto, TimeSpan.FromMinutes(30));
         return dto;
     }
@@ -41,7 +49,7 @@ public class VacationTypeService : IVacationTypeService
         if (cached is not null) return cached;
 
         var list = await _repository.GetAllAsync();
-        var dtos = list.Select(Map).ToList();
+        var dtos = list.Select(MapToDto).ToList();
         await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(30));
         return dtos;
     }
@@ -49,7 +57,7 @@ public class VacationTypeService : IVacationTypeService
     public async Task<(List<GetVacationTypeDto> Items, int TotalCount)> GetPagedAsync(int pageIndex = 1, int pageSize = 10)
     {
         var (items, total) = await _repository.GetPagedAsync(pageIndex: pageIndex, pageSize: pageSize);
-        return (items.Select(Map).ToList(), total);
+        return (items.Select(MapToDto).ToList(), total);
     }
 
     public async Task<GetVacationTypeDto> CreateAsync(CreateVacationTypeDto dto)
@@ -62,7 +70,7 @@ public class VacationTypeService : IVacationTypeService
         await _repository.SaveChangesAsync();
 
         await _cache.RemoveAsync(AllCacheKey);
-        return Map(entity);
+        return MapToDto(entity);
     }
 
     public async Task<GetVacationTypeDto> UpdateAsync(UpdateVacationTypeDto dto)
@@ -80,7 +88,7 @@ public class VacationTypeService : IVacationTypeService
 
         await _cache.RemoveAsync(CacheKey(entity.Id));
         await _cache.RemoveAsync(AllCacheKey);
-        return Map(entity);
+        return MapToDto(entity);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -96,5 +104,22 @@ public class VacationTypeService : IVacationTypeService
         await _cache.RemoveAsync(AllCacheKey);
     }
 
-    private static GetVacationTypeDto Map(VacationType v) => new(v.Id, v.Name);
+    private static GetVacationTypeDto MapToDto(VacationType v) => new(v.Id, v.Name);
+    private static GetVacationTypeDetailsDto MapToDetailsDto(VacationType v) 
+        => new(
+            Id: v.Id,
+            Name:v.Name,
+            JobPosts: v.JobPosts?.Select(j 
+                => new GetVacationTypeJobPostDto(
+                    Id: j.Id,
+                    Title: j.Title,
+                    CompanyId: j.CompanyId,
+                    CompanyName: j.Company.Name,
+                    CategoryId: j.CategoryId,
+                    CategoryName: j.Category.Name,
+                    IsActive: j.IsActive,
+                    ViewCount: j.ViewCount
+                    )
+            ).ToList() ?? new List<GetVacationTypeJobPostDto>()
+            );
 }

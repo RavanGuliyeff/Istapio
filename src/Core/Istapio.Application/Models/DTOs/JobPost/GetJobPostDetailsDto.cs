@@ -17,6 +17,9 @@ public record GetJobPostDetailsDto(
     Guid CategoryId,
     string CategoryName,
 
+    Guid VacationTypeId,
+    string VacationTypeName,
+
     DateTime CreatedAt,
     string? CreatedBy,
     DateTime? UpdatedAt,

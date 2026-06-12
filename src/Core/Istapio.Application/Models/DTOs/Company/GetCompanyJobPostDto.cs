@@ -5,6 +5,8 @@ public record GetCompanyJobPostDto(
     string Title,
     Guid CategoryId,
     string CategoryName,
+    Guid VacationTypeId,
+    string VacationTypeName,
     bool IsActive,
     long ViewCount
 );

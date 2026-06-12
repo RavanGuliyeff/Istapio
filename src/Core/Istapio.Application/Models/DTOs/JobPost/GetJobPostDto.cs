@@ -13,6 +13,9 @@ public record GetJobPostDto(
     string CompanyName,
 
     Guid CategoryId,
-    string CategoryName
+    string CategoryName,
+
+    Guid VacationTypeId,
+    string VacationTypeName
 
 ) : BaseDto(Id);

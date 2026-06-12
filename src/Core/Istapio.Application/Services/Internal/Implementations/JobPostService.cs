@@ -13,6 +13,7 @@ public class JobPostService : IJobPostService
     private readonly IJobPostRepository _repository;
     private readonly ICompanyRepository _companyRepository;
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IVacationTypeRepository _vacationTypeRepository;
     private readonly ICacheService _cache;
 
     private static string CacheKey(Guid id) => $"jobpost:id:{id}";
@@ -22,11 +23,13 @@ public class JobPostService : IJobPostService
         IJobPostRepository repository,
         ICompanyRepository companyRepository,
         ICategoryRepository categoryRepository,
-        ICacheService cache)
+        ICacheService cache,
+        IVacationTypeRepository vacationTypeRepository)
     {
         _repository = repository;
         _companyRepository = companyRepository;
         _categoryRepository = categoryRepository;
+        _vacationTypeRepository = vacationTypeRepository;
         _cache = cache;
     }
 
@@ -38,7 +41,8 @@ public class JobPostService : IJobPostService
         var jobPost = await _repository.GetByIdAsync(id
             , include: jp => jp
             .Include(jp => jp.Company)
-            .Include(jp => jp.Category));
+            .Include(jp => jp.Category)
+            .Include(jp => jp.VacationType));
 
         if (jobPost == null)
             throw new NotFoundException(nameof(JobPost), id);
@@ -55,7 +59,9 @@ public class JobPostService : IJobPostService
 
         var list = await _repository.GetAllAsync(include: jp => jp
             .Include(jp => jp.Company)
-            .Include(jp => jp.Category));
+            .Include(jp => jp.Category)
+            .Include(jp => jp.VacationType)
+            );
 
         var dtos = list.Select(MapToDto).ToList();
         await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(15));
@@ -70,6 +76,7 @@ public class JobPostService : IJobPostService
             include: jp => jp
             .Include(jp => jp.Company)
             .Include(jp => jp.Category)
+            .Include(jp => jp.VacationType)
         );
         return (items.Select(MapToDto).ToList(), total);
     }
@@ -83,6 +90,10 @@ public class JobPostService : IJobPostService
         var category = await _categoryRepository.GetByIdAsync(dto.CategoryId);
         if (category == null)
             throw new NotFoundException(nameof(Category), dto.CategoryId);
+        
+        var vacationType = await _vacationTypeRepository.GetByIdAsync(dto.VacationTypeId);
+        if (vacationType == null)
+            throw new NotFoundException(nameof(VacationType), dto.VacationTypeId);
 
         if (await _repository.AnyAsync(j => j.Title == dto.Title && j.CompanyId == dto.CompanyId))
             throw new ConflictException($"Job post with title '{dto.Title}' already exists for this company");
@@ -99,7 +110,8 @@ public class JobPostService : IJobPostService
             ViewCount = 0,
             LastDate = dto.LastDate,
             CompanyId = dto.CompanyId,
-            CategoryId = dto.CategoryId
+            CategoryId = dto.CategoryId,
+            VacationTypeId = dto.VacationTypeId
         };
 
         await _repository.AddAsync(entity);
@@ -119,6 +131,10 @@ public class JobPostService : IJobPostService
         if (category == null)
             throw new NotFoundException(nameof(Category), dto.CategoryId);
 
+        var vacationType = await _vacationTypeRepository.GetByIdAsync(dto.VacationTypeId);
+        if (vacationType == null)
+            throw new NotFoundException(nameof(VacationType), dto.VacationTypeId);
+
         if (entity.Title != dto.Title &&
             await _repository.AnyAsync(j => j.Title == dto.Title && j.CompanyId == entity.CompanyId))
             throw new ConflictException($"Job post with title '{dto.Title}' already exists for this company");
@@ -132,6 +148,7 @@ public class JobPostService : IJobPostService
         entity.IsActive = dto.IsActive;
         entity.LastDate = dto.LastDate;
         entity.CategoryId = dto.CategoryId;
+        entity.VacationTypeId = dto.VacationTypeId;
         entity.UpdatedAt = DateTime.UtcNow;
 
         _repository.Update(entity);
@@ -181,7 +198,9 @@ public class JobPostService : IJobPostService
             CategoryId: j.CategoryId,
             CategoryName: j.Category?.Name ?? "Unknown",
             CompanyId: j.CompanyId,
-            CompanyName: j.Company?.Name ?? "Unknown"
+            CompanyName: j.Company?.Name ?? "Unknown",
+            VacationTypeId: j.VacationTypeId,
+            VacationTypeName: j.VacationType?.Name ?? "Unknown"
         );
 
     private static GetJobPostDetailsDto MapToDetailsDto(JobPost j)
@@ -198,6 +217,8 @@ public class JobPostService : IJobPostService
             CategoryName: j.Category.Name,
             CompanyId: j.CompanyId,
             CompanyName: j.Company.Name,
+            VacationTypeId: j.VacationTypeId,
+            VacationTypeName: j.VacationType.Name,
             CreatedAt: j.CreatedAt,
             CreatedBy: j.CreatedBy,
             UpdatedAt: j.UpdatedAt,

@@ -7,5 +7,6 @@ public record CreateJobPostDto(
     bool IsActive,
     DateTime? LastDate,
     Guid CompanyId,
-    Guid CategoryId
+    Guid CategoryId,
+    Guid VacationTypeId
 );

@@ -14,7 +14,6 @@ public class ValidationFilter : IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        // FluentValidation ilə validate et
         foreach (var argument in context.ActionArguments.Values)
         {
             if (argument == null) continue;
