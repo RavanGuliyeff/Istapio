@@ -15,6 +15,8 @@ public class JobPost: BaseAuditableEntity
     public Guid CompanyId { get; set; }
     public Category Category { get; set; } = null!;
     public Guid CategoryId { get; set; }
+    public VacationType VacationType { get; set; } = null!;
+    public Guid VacationTypeId { get; set; }
     public ICollection<JobPostSkill> RequiredSkills { get; set; } = new List<JobPostSkill>();
 }
 

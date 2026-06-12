@@ -33,7 +33,11 @@ public class CategoryService : ICategoryService
         var category = await _repository.GetByIdAsync(id,
             include: c => c
             .Include(x => x.SubCategories)
-            .Include(x => x.JobPosts));
+            .Include(x => x.JobPosts)
+                .ThenInclude(jp => jp.Company)
+            .Include(x => x.JobPosts)
+                .ThenInclude(jp => jp.VacationType)
+            );
         if (category == null)
             throw new NotFoundException(nameof(Category), id);
 
@@ -192,6 +196,8 @@ public class CategoryService : ICategoryService
                 Title: jp.Title,
                 CompanyId: jp.CompanyId,
                 CompanyName: jp.Company.Name,
+                VacationTypeId: jp.VacationTypeId,
+                VacationTypeName: jp.VacationType.Name,
                 IsActive: jp.IsActive,
                 ViewCount: jp.ViewCount
                 )).ToList() ?? new List<GetCategoryJobPostDto>()
