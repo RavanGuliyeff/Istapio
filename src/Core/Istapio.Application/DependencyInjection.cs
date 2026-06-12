@@ -1,8 +1,9 @@
 ﻿using FluentValidation;
-using Microsoft.Extensions.DependencyInjection;
+using Istapio.Application.Models.Settings;
 using Istapio.Domain.Interfaces;
-using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Istapio.Application;
 
@@ -15,6 +16,9 @@ public static class DependencyInjection
         //services.AddAutoMapper(assembly);
 
         var licenseKey = configuration["AutoMapper:LicenseKey"];
+
+        services.Configure<MailSettings>(configuration.GetSection("MailSettings"));
+        services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
 
         services.AddAutoMapper(cfg => cfg.LicenseKey = licenseKey,
             Assembly.GetExecutingAssembly());

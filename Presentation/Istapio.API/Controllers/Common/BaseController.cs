@@ -28,4 +28,24 @@ public class BaseController : ControllerBase
         return StatusCode(204, ApiResponse.SuccessResponse(new { }, 204, message));
     }
 
+
+    protected string GetClientIpAddress()
+    {
+        var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(forwardedFor))
+            return forwardedFor.Split(',')[0].Trim();
+
+        var realIp = HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(realIp))
+            return realIp;
+
+        var remoteIp = HttpContext.Connection.RemoteIpAddress;
+
+        if (remoteIp != null && remoteIp.IsIPv4MappedToIPv6)
+            remoteIp = remoteIp.MapToIPv4();
+
+        return remoteIp?.ToString() ?? "Unknown";
+
+    }
+
 }
