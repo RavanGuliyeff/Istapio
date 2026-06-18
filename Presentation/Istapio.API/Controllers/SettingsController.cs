@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Istapio.API.Controllers.Common;
 using Istapio.Application.Models.DTOs.Setting;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Domain.Constants;
 
 namespace Istapio.API.Controllers;
 
@@ -60,8 +62,13 @@ public class SettingsController : BaseController
     /// </summary>
     /// <returns>A list of all settings</returns>
     /// <response code="200">Returns the list of settings</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpGet]
     [ProducesResponseType(typeof(List<GetSettingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetAll()
     {
         var settings = await _settingService.GetAllAsync();
@@ -75,8 +82,13 @@ public class SettingsController : BaseController
     /// <param name="pageSize">The number of items per page (default: 10)</param>
     /// <returns>A paginated list of settings with total count</returns>
     /// <response code="200">Returns the paginated settings</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpGet("paged")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetPaged([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
     {
         var (items, totalCount) = await _settingService.GetPagedAsync(pageIndex, pageSize);
@@ -90,10 +102,15 @@ public class SettingsController : BaseController
     /// <returns>The newly created setting</returns>
     /// <response code="201">Returns the newly created setting</response>
     /// <response code="400">If the request data is invalid</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="409">If a setting with the same key already exists</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin}")]
     [HttpPost]
     [ProducesResponseType(typeof(GetSettingDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create([FromBody] CreateSettingDto dto)
     {
@@ -109,10 +126,15 @@ public class SettingsController : BaseController
     /// <returns>The updated setting</returns>
     /// <response code="200">Returns the updated setting</response>
     /// <response code="400">If the ID in route doesn't match the ID in body</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="404">If the setting is not found</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin}")]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(GetSettingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSettingDto dto)
     {
@@ -123,37 +145,20 @@ public class SettingsController : BaseController
         return Success(setting, "Setting updated successfully");
     }
 
-    ///// <summary>
-    ///// Updates an existing setting by its key
-    ///// </summary>
-    ///// <param name="key">The unique key of the setting</param>
-    ///// <param name="dto">The updated setting data</param>
-    ///// <returns>The updated setting</returns>
-    ///// <response code="200">Returns the updated setting</response>
-    ///// <response code="400">If the key in route doesn't match the key in body</response>
-    ///// <response code="404">If the setting is not found</response>
-    //[HttpPut("by-key/{key}")]
-    //[ProducesResponseType(typeof(GetSettingDto), StatusCodes.Status200OK)]
-    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-    //[ProducesResponseType(StatusCodes.Status404NotFound)]
-    //public async Task<IActionResult> UpdateByKey(string key, [FromBody] UpdateSettingDto dto)
-    //{
-    //    if (key != dto.Key)
-    //        return BadRequest("Key mismatch");
-
-    //    var setting = await _settingService.UpdateByKeyAsync(dto);
-    //    return Success(setting, "Setting updated successfully");
-    //}
-
     /// <summary>
     /// Soft deletes a setting by its identifier
     /// </summary>
     /// <param name="id">The unique identifier of the setting to delete</param>
     /// <returns>No content</returns>
     /// <response code="204">If the setting was successfully deleted</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="404">If the setting is not found</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin}")]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -167,9 +172,14 @@ public class SettingsController : BaseController
     /// <param name="key">The unique key of the setting to delete</param>
     /// <returns>No content</returns>
     /// <response code="204">If the setting was successfully deleted</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="404">If the setting is not found</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin}")]
     [HttpDelete("by-key/{key}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteByKey(string key)
     {
@@ -201,10 +211,15 @@ public class SettingsController : BaseController
     /// </summary>
     /// <param name="key">The unique key of the setting</param>
     /// <param name="request">The value to set</param>
-    /// <returns>Success message</returns>
+    /// <returns>Success response</returns>
     /// <response code="200">If the setting value was successfully set or updated</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin}")]
     [HttpPost("value/{key}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> SetValue(string key, [FromBody] SetValueRequest request)
     {
         await _settingService.SetValueAsync(key, request.Value);

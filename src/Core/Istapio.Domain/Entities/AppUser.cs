@@ -7,7 +7,7 @@ public sealed class AppUser : IdentityUser
     //Scalar Properties
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public byte OtpCountToday { get; set; }
+    //public byte OtpCountToday { get; set; }
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public string? LastLoginIp { get; set; }
 

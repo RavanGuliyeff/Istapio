@@ -8,8 +8,8 @@ namespace Istapio.Persistence.Implementations.Repositories;
 
 public sealed class CompanyRepository : AuditableRepository<Company>, ICompanyRepository
 {
-    public CompanyRepository(AppDbContext context, ICurrentUserService currentUserService)
-        : base(context, currentUserService)
+    public CompanyRepository(AppDbContext context)
+        : base(context)
     {
     }
 }

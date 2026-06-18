@@ -108,8 +108,20 @@ public class AppDbContext : IdentityDbContext<AppUser>
                 case EntityState.Modified:
                     entry.Entity.UpdatedAt = DateTime.UtcNow;
                     entry.Entity.UpdatedBy = currentUser;
-                    break;
 
+                    if (entry.Entity.IsDeleted && entry.Entity.DeletedBy == null)
+                    {
+                        entry.Entity.DeletedBy = currentUser;
+                        entry.Entity.DeletedAt = DateTime.UtcNow;
+                    }
+
+                    else if (!entry.Entity.IsDeleted && entry.Entity.DeletedBy != null)
+                    {
+                        entry.Entity.DeletedBy = null;
+                        entry.Entity.DeletedAt = null;
+                    }
+
+                    break;
                 //case EntityState.Deleted:
                 //    entry.State = EntityState.Modified;
                 //    entry.Entity.IsDeleted = true;

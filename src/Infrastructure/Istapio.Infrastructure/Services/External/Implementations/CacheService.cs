@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 
-namespace Istapio.Infrastructure.Services.External;
+namespace Istapio.Infrastructure.Services.External.Implementations;
 
 public class CacheService : ICacheService
 {

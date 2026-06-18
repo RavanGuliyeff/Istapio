@@ -70,9 +70,6 @@ namespace Istapio.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<byte>("OtpCountToday")
-                        .HasColumnType("smallint");
-
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
@@ -241,6 +238,9 @@ namespace Istapio.Persistence.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<Guid>("VacationTypeId")
+                        .HasColumnType("uuid");
+
                     b.Property<long>("ViewCount")
                         .HasColumnType("bigint");
 
@@ -249,6 +249,8 @@ namespace Istapio.Persistence.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("CompanyId");
+
+                    b.HasIndex("VacationTypeId");
 
                     b.ToTable("JobPosts");
                 });
@@ -576,9 +578,17 @@ namespace Istapio.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Istapio.Domain.Entities.VacationType", "VacationType")
+                        .WithMany("JobPosts")
+                        .HasForeignKey("VacationTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Category");
 
                     b.Navigation("Company");
+
+                    b.Navigation("VacationType");
                 });
 
             modelBuilder.Entity("Istapio.Domain.Entities.JobPostSkill", b =>
@@ -712,6 +722,11 @@ namespace Istapio.Persistence.Migrations
                     b.Navigation("JobPostSkills");
 
                     b.Navigation("UserSkills");
+                });
+
+            modelBuilder.Entity("Istapio.Domain.Entities.VacationType", b =>
+                {
+                    b.Navigation("JobPosts");
                 });
 #pragma warning restore 612, 618
         }
