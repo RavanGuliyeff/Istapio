@@ -20,6 +20,8 @@ public record GetJobPostDetailsDto(
     Guid VacationTypeId,
     string VacationTypeName,
 
+    IReadOnlyList<GetJobPostSkillDto> RequiredSkills,
+
     DateTime CreatedAt,
     string? CreatedBy,
     DateTime? UpdatedAt,

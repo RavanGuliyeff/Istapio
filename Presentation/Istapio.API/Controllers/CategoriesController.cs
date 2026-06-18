@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Istapio.API.Controllers.Common;
 using Istapio.Application.Models.DTOs.Category;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Domain.Constants;
 
 namespace Istapio.API.Controllers;
 
@@ -31,7 +33,7 @@ public class CategoriesController : BaseController
     /// <response code="200">Returns the category</response>
     /// <response code="404">If the category is not found</response>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(GetCategoryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(GetCategoryDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -74,9 +76,14 @@ public class CategoriesController : BaseController
     /// <returns>The newly created category</returns>
     /// <response code="201">Returns the newly created category</response>
     /// <response code="400">If the request data is invalid</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpPost]
     [ProducesResponseType(typeof(GetCategoryDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto)
     {
         var category = await _categoryService.CreateAsync(dto);
@@ -91,10 +98,15 @@ public class CategoriesController : BaseController
     /// <returns>The updated category</returns>
     /// <response code="200">Returns the updated category</response>
     /// <response code="400">If the ID in route doesn't match the ID in body</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="404">If the category is not found</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(GetCategoryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryDto dto)
     {
@@ -111,9 +123,14 @@ public class CategoriesController : BaseController
     /// <param name="id">The unique identifier of the category to delete</param>
     /// <returns>No content</returns>
     /// <response code="204">If the category was successfully deleted</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="404">If the category is not found</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {

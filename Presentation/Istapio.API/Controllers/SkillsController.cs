@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Istapio.API.Controllers.Common;
 using Istapio.Application.Models.DTOs.Skill;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Domain.Constants;
 
 namespace Istapio.API.Controllers;
 
@@ -74,9 +76,14 @@ public class SkillsController : BaseController
     /// <returns>The newly created skill</returns>
     /// <response code="201">Returns the newly created skill</response>
     /// <response code="400">If the request data is invalid</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpPost]
     [ProducesResponseType(typeof(GetSkillDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] CreateSkillDto dto)
     {
         var skill = await _skillService.CreateAsync(dto);
@@ -91,10 +98,15 @@ public class SkillsController : BaseController
     /// <returns>The updated skill</returns>
     /// <response code="200">Returns the updated skill</response>
     /// <response code="400">If the ID in route doesn't match the ID in body</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="404">If the skill is not found</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(GetSkillDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSkillDto dto)
     {
@@ -111,9 +123,14 @@ public class SkillsController : BaseController
     /// <param name="id">The unique identifier of the skill to delete</param>
     /// <returns>No content</returns>
     /// <response code="204">If the skill was successfully deleted</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user does not have the required role</response>
     /// <response code="404">If the skill is not found</response>
+    [Authorize(Roles = $"{Roles.SuperAdmin},{Roles.Admin},{Roles.Moderator}")]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {

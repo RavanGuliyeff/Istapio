@@ -12,10 +12,8 @@ public class AuditableRepository<TEntity> : Repository<TEntity>, IAuditableRepos
     where TEntity : BaseAuditableEntity
 {
 
-    private readonly ICurrentUserService _currentUserService;
-    public AuditableRepository(AppDbContext context, ICurrentUserService currentUserService) : base(context)
+    public AuditableRepository(AppDbContext context) : base(context)
     {
-        _currentUserService = currentUserService;
     }
 
     // Silinmiş entity-ləri də gətir
@@ -71,8 +69,8 @@ public class AuditableRepository<TEntity> : Repository<TEntity>, IAuditableRepos
         if (entity != null && !entity.IsDeleted)
         {
             entity.IsDeleted = true;
-            entity.DeletedAt = DateTime.UtcNow;
-            entity.DeletedBy = _currentUserService.UserId;
+            //entity.DeletedAt = DateTime.UtcNow;
+            //entity.DeletedBy = _currentUserService.UserId;
             // DeletedBy DbContext-in SaveChangesAsync-də set olunacaq (CurrentUserService vasitəsilə)
         }
     }

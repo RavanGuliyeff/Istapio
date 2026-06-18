@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Istapio.API.Controllers.Common;
 using Istapio.Application.Models.DTOs.Company;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Domain.Constants;
 
 namespace Istapio.API.Controllers;
 
@@ -74,9 +76,12 @@ public class CompaniesController : BaseController
     /// <returns>The newly created company</returns>
     /// <response code="201">Returns the newly created company</response>
     /// <response code="400">If the request data is invalid</response>
+    /// <response code="401">If the user is not authenticated</response>
+    [Authorize]
     [HttpPost]
     [ProducesResponseType(typeof(GetCompanyDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Create([FromBody] CreateCompanyDto dto)
     {
         var company = await _companyService.CreateAsync(dto);
@@ -84,17 +89,23 @@ public class CompaniesController : BaseController
     }
 
     /// <summary>
-    /// Updates an existing company by its identifier
+    /// Updates an existing company by its identifier.
+    /// Only the owner or an admin/moderator can update a company.
     /// </summary>
     /// <param name="id">The unique identifier of the company</param>
     /// <param name="dto">The updated company data</param>
     /// <returns>The updated company</returns>
     /// <response code="200">Returns the updated company</response>
     /// <response code="400">If the ID in route doesn't match the ID in body</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user is not the owner or does not have the required role</response>
     /// <response code="404">If the company is not found</response>
+    [Authorize]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(GetCompanyDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCompanyDto dto)
     {
@@ -106,14 +117,20 @@ public class CompaniesController : BaseController
     }
 
     /// <summary>
-    /// Soft deletes a company by its identifier
+    /// Soft deletes a company by its identifier.
+    /// Only the owner or an admin/moderator can delete a company.
     /// </summary>
     /// <param name="id">The unique identifier of the company to delete</param>
     /// <returns>No content</returns>
     /// <response code="204">If the company was successfully deleted</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user is not the owner or does not have the required role</response>
     /// <response code="404">If the company is not found</response>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {

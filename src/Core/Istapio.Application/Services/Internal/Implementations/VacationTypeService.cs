@@ -2,6 +2,7 @@ using Istapio.Application.Exceptions;
 using Istapio.Application.Models.DTOs.VacationType;
 using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Application.Utilities.Constants;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +14,6 @@ public class VacationTypeService : IVacationTypeService
     private readonly IVacationTypeRepository _repository;
     private readonly ICacheService _cache;
 
-    private static string CacheKey(Guid id) => $"vacationtype:id:{id}";
-    private const string AllCacheKey = "vacationtypes:all";
-
     public VacationTypeService(IVacationTypeRepository repository, ICacheService cache)
     {
         _repository = repository;
@@ -24,7 +22,7 @@ public class VacationTypeService : IVacationTypeService
 
     public async Task<GetVacationTypeDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetVacationTypeDetailsDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetVacationTypeDetailsDto>(CacheKeys.VacationTypes.ById(id));
         if (cached is not null) return cached;
 
         var vacationType = await _repository.GetByIdAsync(id, 
@@ -39,18 +37,18 @@ public class VacationTypeService : IVacationTypeService
             throw new NotFoundException(nameof(VacationType), id);
 
         var dto = MapToDetailsDto(vacationType);
-        await _cache.SetAsync(CacheKey(id), dto, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.VacationTypes.ById(id), dto, TimeSpan.FromMinutes(30));
         return dto;
     }
 
     public async Task<List<GetVacationTypeDto>> GetAllAsync()
     {
-        var cached = await _cache.GetAsync<List<GetVacationTypeDto>>(AllCacheKey);
+        var cached = await _cache.GetAsync<List<GetVacationTypeDto>>(CacheKeys.VacationTypes.All);
         if (cached is not null) return cached;
 
         var list = await _repository.GetAllAsync();
         var dtos = list.Select(MapToDto).ToList();
-        await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.VacationTypes.All, dtos, TimeSpan.FromMinutes(30));
         return dtos;
     }
 
@@ -69,7 +67,7 @@ public class VacationTypeService : IVacationTypeService
         await _repository.AddAsync(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.VacationTypes.All);
         return MapToDto(entity);
     }
 
@@ -86,8 +84,8 @@ public class VacationTypeService : IVacationTypeService
         _repository.Update(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(entity.Id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.VacationTypes.ById(entity.Id));
+        await _cache.RemoveAsync(CacheKeys.VacationTypes.All);
         return MapToDto(entity);
     }
 
@@ -100,8 +98,8 @@ public class VacationTypeService : IVacationTypeService
         _repository.Delete(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.VacationTypes.ById(id));
+        await _cache.RemoveAsync(CacheKeys.VacationTypes.All);
     }
 
     private static GetVacationTypeDto MapToDto(VacationType v) => new(v.Id, v.Name);

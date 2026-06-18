@@ -8,8 +8,8 @@ namespace Istapio.Persistence.Implementations.Repositories;
 
 public sealed class SettingRepository : AuditableRepository<Setting>, ISettingRepository
 {
-    public SettingRepository(AppDbContext context, ICurrentUserService currentUserService)
-        : base(context, currentUserService)
+    public SettingRepository(AppDbContext context)
+        : base(context)
     {
     }
 }

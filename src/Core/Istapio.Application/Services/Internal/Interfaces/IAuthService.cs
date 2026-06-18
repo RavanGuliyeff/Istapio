@@ -5,6 +5,7 @@ namespace Istapio.Application.Services.Internal.Interfaces;
 
 public interface IAuthService
 {
+    Task<UserProfileDto> GetProfileAsync();
     Task<AuthResponse> RegisterAsync(RegisterDto dto);
 
     Task<AuthResponse> LoginAsync(LoginDto dto, string ipAddress);  

@@ -3,6 +3,7 @@ using Istapio.Application.Models.DTOs.Company;
 using Istapio.Application.Models.DTOs.Skill;
 using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Application.Utilities.Constants;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -14,9 +15,6 @@ public class SkillService : ISkillService
     private readonly ISkillRepository _repository;
     private readonly ICacheService _cache;
 
-    private static string CacheKey(Guid id) => $"skill:id:{id}";
-    private const string AllCacheKey = "skills:all";
-
     public SkillService(ISkillRepository repository, ICacheService cache)
     {
         _repository = repository;
@@ -25,7 +23,7 @@ public class SkillService : ISkillService
 
     public async Task<GetSkillDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetSkillDetailsDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetSkillDetailsDto>(CacheKeys.Skills.ById(id));
         if (cached is not null) return cached;
 
         var skill = await _repository.GetByIdAsync(id,
@@ -38,18 +36,18 @@ public class SkillService : ISkillService
             throw new NotFoundException(nameof(Skill), id);
 
         var dto = MapToDetailsDto(skill);
-        await _cache.SetAsync(CacheKey(id), dto, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.Skills.ById(id), dto, TimeSpan.FromMinutes(30));
         return dto;
     }
 
     public async Task<List<GetSkillDto>> GetAllAsync()
     {
-        var cached = await _cache.GetAsync<List<GetSkillDto>>(AllCacheKey);
+        var cached = await _cache.GetAsync<List<GetSkillDto>>(CacheKeys.Skills.All);
         if (cached is not null) return cached;
 
         var list = await _repository.GetAllAsync();
         var dtos = list.Select(MapToDto).ToList();
-        await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.Skills.All, dtos, TimeSpan.FromMinutes(30));
         return dtos;
     }
 
@@ -68,7 +66,7 @@ public class SkillService : ISkillService
         await _repository.AddAsync(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Skills.All);
         return MapToDto(entity);
     }
 
@@ -85,8 +83,8 @@ public class SkillService : ISkillService
         _repository.Update(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(entity.Id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Skills.ById(entity.Id));
+        await _cache.RemoveAsync(CacheKeys.Skills.All);
         return MapToDto(entity);
     }
 
@@ -99,8 +97,8 @@ public class SkillService : ISkillService
         _repository.Delete(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Skills.ById(id));
+        await _cache.RemoveAsync(CacheKeys.Skills.All);
     }
 
     private static GetSkillDto MapToDto(Skill s) => new(s.Id, s.Name);

@@ -2,6 +2,7 @@ using Istapio.Application.Exceptions;
 using Istapio.Application.Models.DTOs.Company;
 using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Application.Utilities.Constants;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +14,6 @@ public class CompanyService : ICompanyService
     private readonly ICompanyRepository _repository;
     private readonly ICacheService _cache;
 
-    private static string CacheKey(Guid id) => $"company:id:{id}";
-    private const string AllCacheKey = "companies:all";
-
     public CompanyService(ICompanyRepository repository, ICacheService cache)
     {
         _repository = repository;
@@ -24,7 +22,7 @@ public class CompanyService : ICompanyService
 
     public async Task<GetCompanyDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetCompanyDetailsDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetCompanyDetailsDto>(CacheKeys.Companies.ById(id));
         if (cached is not null) return cached;
 
         var company = await _repository.GetByIdAsync(id,
@@ -40,19 +38,19 @@ public class CompanyService : ICompanyService
             throw new NotFoundException(nameof(Company), id);
 
         var dto = MapToDetailsDto(company);
-        await _cache.SetAsync(CacheKey(id), dto, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.Companies.ById(id), dto, TimeSpan.FromMinutes(30));
         return dto;
     }
 
     public async Task<List<GetCompanyDto>> GetAllAsync()
     {
-        var cached = await _cache.GetAsync<List<GetCompanyDto>>(AllCacheKey);
+        var cached = await _cache.GetAsync<List<GetCompanyDto>>(CacheKeys.Companies.All);
         if (cached is not null) return cached;
 
         var list = await _repository.GetAllAsync(include: c => c
             .Include(c => c.User));
         var dtos = list.Select(MapToDto).ToList();
-        await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.Companies.All, dtos, TimeSpan.FromMinutes(30));
         return dtos;
     }
 
@@ -85,7 +83,7 @@ public class CompanyService : ICompanyService
         await _repository.AddAsync(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Companies.All);
         return MapToDto(entity);
     }
 
@@ -107,8 +105,8 @@ public class CompanyService : ICompanyService
         _repository.Update(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(entity.Id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Companies.ById(entity.Id));
+        await _cache.RemoveAsync(CacheKeys.Companies.All);
         return MapToDto(entity);
     }
 
@@ -121,8 +119,8 @@ public class CompanyService : ICompanyService
         await _repository.SoftDeleteAsync(id);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Companies.ById(id));
+        await _cache.RemoveAsync(CacheKeys.Companies.All);
     }
 
     private static GetCompanyDto MapToDto(Company c)

@@ -8,8 +8,8 @@ namespace Istapio.Persistence.Implementations.Repositories;
 
 public sealed class JobPostRepository : AuditableRepository<JobPost>, IJobPostRepository
 {
-    public JobPostRepository(AppDbContext context, ICurrentUserService currentUserService)
-        : base(context, currentUserService)
+    public JobPostRepository(AppDbContext context)
+        : base(context)
     {
     }
 }

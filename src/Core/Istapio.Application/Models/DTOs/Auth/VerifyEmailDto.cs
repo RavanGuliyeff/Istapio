@@ -4,4 +4,3 @@ public sealed record VerifyEmailDto(
     string Email,
     string OtpCode
 );
-

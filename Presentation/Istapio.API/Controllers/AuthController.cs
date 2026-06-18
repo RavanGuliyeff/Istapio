@@ -2,6 +2,7 @@
 using Istapio.Application.Models.DTOs.Auth;
 using Istapio.Application.Models.Responses;
 using Istapio.Application.Services.Internal.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -144,5 +145,21 @@ public class AuthController : BaseController
         await _authService.LogoutAsync(dto, ipAddress);
 
         return NoContent("Logout successful");
+    }
+
+    /// <summary>
+    /// Returns the profile of the currently authenticated user
+    /// </summary>
+    /// <returns>User profile data</returns>
+    /// <response code="200">Profile retrieved successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    [Authorize]
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetProfile()
+    {
+        var result = await _authService.GetProfileAsync();
+        return Success(result, "Profile retrieved successfully");
     }
 }
