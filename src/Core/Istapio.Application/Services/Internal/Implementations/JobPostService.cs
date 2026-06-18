@@ -2,6 +2,7 @@ using Istapio.Application.Exceptions;
 using Istapio.Application.Models.DTOs.JobPost;
 using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Application.Utilities.Constants;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -15,9 +16,6 @@ public class JobPostService : IJobPostService
     private readonly ICategoryRepository _categoryRepository;
     private readonly IVacationTypeRepository _vacationTypeRepository;
     private readonly ICacheService _cache;
-
-    private static string CacheKey(Guid id) => $"jobpost:id:{id}";
-    private const string AllCacheKey = "jobposts:all";
 
     public JobPostService(
         IJobPostRepository repository,
@@ -35,26 +33,28 @@ public class JobPostService : IJobPostService
 
     public async Task<GetJobPostDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetJobPostDetailsDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetJobPostDetailsDto>(CacheKeys.JobPosts.ById(id));
         if (cached is not null) return cached;
 
         var jobPost = await _repository.GetByIdAsync(id
             , include: jp => jp
             .Include(jp => jp.Company)
             .Include(jp => jp.Category)
-            .Include(jp => jp.VacationType));
+            .Include(jp => jp.VacationType)
+            .Include(jp => jp.RequiredSkills)
+                .ThenInclude(jps => jps.Skill));
 
         if (jobPost == null)
             throw new NotFoundException(nameof(JobPost), id);
 
         var dto = MapToDetailsDto(jobPost);
-        await _cache.SetAsync(CacheKey(id), dto, TimeSpan.FromMinutes(15));
+        await _cache.SetAsync(CacheKeys.JobPosts.ById(id), dto, TimeSpan.FromMinutes(15));
         return dto;
     }
 
     public async Task<List<GetJobPostDto>> GetAllAsync()
     {
-        var cached = await _cache.GetAsync<List<GetJobPostDto>>(AllCacheKey);
+        var cached = await _cache.GetAsync<List<GetJobPostDto>>(CacheKeys.JobPosts.All);
         if (cached is not null) return cached;
 
         var list = await _repository.GetAllAsync(include: jp => jp
@@ -64,7 +64,7 @@ public class JobPostService : IJobPostService
             );
 
         var dtos = list.Select(MapToDto).ToList();
-        await _cache.SetAsync(AllCacheKey, dtos, TimeSpan.FromMinutes(15));
+        await _cache.SetAsync(CacheKeys.JobPosts.All, dtos, TimeSpan.FromMinutes(15));
         return dtos;
     }
 
@@ -117,7 +117,7 @@ public class JobPostService : IJobPostService
         await _repository.AddAsync(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.JobPosts.All);
         return MapToDto(entity);
     }
 
@@ -154,8 +154,8 @@ public class JobPostService : IJobPostService
         _repository.Update(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(entity.Id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.JobPosts.ById(entity.Id));
+        await _cache.RemoveAsync(CacheKeys.JobPosts.All);
         return MapToDto(entity);
     }
 
@@ -168,8 +168,8 @@ public class JobPostService : IJobPostService
         await _repository.SoftDeleteAsync(id);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.JobPosts.ById(id));
+        await _cache.RemoveAsync(CacheKeys.JobPosts.All);
     }
 
     public async Task IncrementViewCountAsync(Guid id)
@@ -183,8 +183,8 @@ public class JobPostService : IJobPostService
 
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(id));
-        await _cache.RemoveAsync(AllCacheKey);
+        await _cache.RemoveAsync(CacheKeys.JobPosts.ById(id));
+        await _cache.RemoveAsync(CacheKeys.JobPosts.All);
     }
 
     private static GetJobPostDto MapToDto(JobPost j)
@@ -219,6 +219,10 @@ public class JobPostService : IJobPostService
             CompanyName: j.Company.Name,
             VacationTypeId: j.VacationTypeId,
             VacationTypeName: j.VacationType.Name,
+            RequiredSkills: j.RequiredSkills.Select(js => new GetJobPostSkillDto(            
+                Id: js.SkillId,
+                Name: js.Skill.Name
+            )).ToList(),
             CreatedAt: j.CreatedAt,
             CreatedBy: j.CreatedBy,
             UpdatedAt: j.UpdatedAt,

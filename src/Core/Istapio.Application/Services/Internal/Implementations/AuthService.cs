@@ -8,6 +8,7 @@ using Istapio.Application.Services.Internal.Interfaces;
 using Istapio.Application.Utilities.Enums;
 using Istapio.Application.Utilities.Helpers;
 using Istapio.Domain.Entities;
+using Istapio.Domain.Interfaces;
 using Istapio.Domain.Interfaces.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public sealed class AuthService : IAuthService
     private readonly IOtpService _otpService;
     private readonly IMailService _emailService;
     private readonly IRefreshTokenRepository _refreshTokenRepo;
+    private readonly ICurrentUserService _currentUserService;
     private readonly JwtSettings _jwt;
 
     public AuthService(
@@ -30,7 +32,8 @@ public sealed class AuthService : IAuthService
         IOtpService otpService,
         IMailService emailService,
         IRefreshTokenRepository refreshTokenRepo,
-        IOptions<JwtSettings> jwtOptions)
+        IOptions<JwtSettings> jwtOptions,
+        ICurrentUserService currentUserService)
     {
         _userManager = userManager;
         _tokenService = tokenService;
@@ -38,8 +41,38 @@ public sealed class AuthService : IAuthService
         _emailService = emailService;
         _refreshTokenRepo = refreshTokenRepo;
         _jwt = jwtOptions.Value;
+        _currentUserService = currentUserService;
     }
 
+
+    public async Task<UserProfileDto> GetProfileAsync()
+    {
+        var userId = _currentUserService.UserId;
+
+        var user = await _userManager.Users.
+            Include(u => u.Companies).
+            Include(u => u.Skills).
+                ThenInclude(us => us.Skill).
+            FirstOrDefaultAsync(u => u.Id == userId)
+            ?? throw new NotFoundException(nameof(AppUser), userId);
+
+        return new UserProfileDto(
+            Id: user.Id,
+            Email: user.Email!,
+            FirstName: user.FirstName,
+            LastName: user.LastName,
+            Created: user.Created,
+            Roles: _currentUserService.Roles,
+            Companies: user.Companies.Select(c => new GetUserCompanyDto(
+                Id: c.Id,
+                Name: c.Name,
+                LogoUrl: c.LogoUrl)).ToList(),
+
+            Skills: user.Skills.Select(s => new GetUserSkillDto(
+                Id: s.SkillId,
+                Name: s.Skill.Name)).ToList()
+        );
+    }
 
     public async Task<AuthResponse> RegisterAsync(
     RegisterDto dto)
@@ -103,13 +136,15 @@ public sealed class AuthService : IAuthService
     LoginDto dto,
     string ipAddress)
     {
-        var user = await _userManager.FindByEmailAsync(dto.Email)
+        var user = await _userManager.FindByEmailAsync(dto.EmailOrUsername)
+            ?? await _userManager.FindByNameAsync(dto.EmailOrUsername)
             ?? throw new UnauthorizedException(
-                "Email or password is incorrect.");
+                "Login data is incorrect.");
 
         if (!await _userManager.CheckPasswordAsync(user, dto.Password))
             throw new UnauthorizedException(
-                "Email or password is incorrect.");
+                "Login data is incorrect.");
+
 
         if (!user.EmailConfirmed)
             throw new ValidationException(

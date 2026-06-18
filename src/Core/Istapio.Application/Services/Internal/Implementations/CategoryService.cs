@@ -2,6 +2,7 @@ using Istapio.Application.Exceptions;
 using Istapio.Application.Models.DTOs.Category;
 using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Application.Utilities.Constants;
 using Istapio.Domain.Entities;
 using Istapio.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +14,6 @@ public class CategoryService : ICategoryService
     private readonly ICategoryRepository _repository;
     private readonly ICacheService _cache;
 
-    private static string CacheKey(Guid id) => $"category:id:{id}";
-    private const string AllCategoriesCacheKey = "categories:all";
-
     public CategoryService(
         ICategoryRepository repository,
         ICacheService cache)
@@ -26,7 +24,7 @@ public class CategoryService : ICategoryService
 
     public async Task<GetCategoryDetailsDto> GetByIdAsync(Guid id)
     {
-        var cached = await _cache.GetAsync<GetCategoryDetailsDto>(CacheKey(id));
+        var cached = await _cache.GetAsync<GetCategoryDetailsDto>(CacheKeys.Categories.ById(id));
         if (cached is not null)
             return cached;
 
@@ -44,7 +42,7 @@ public class CategoryService : ICategoryService
         var dto = MapToDetailsDto(category);
 
         await _cache.SetAsync(
-            CacheKey(id),
+            CacheKeys.Categories.ById(id),
             dto,
             TimeSpan.FromMinutes(30));
 
@@ -53,7 +51,7 @@ public class CategoryService : ICategoryService
 
     public async Task<List<GetCategoryDto>> GetAllAsync()
     {
-        var cached = await _cache.GetAsync<List<GetCategoryDto>>(AllCategoriesCacheKey);
+        var cached = await _cache.GetAsync<List<GetCategoryDto>>(CacheKeys.Categories.All);
         if (cached is not null)
             return cached;
 
@@ -61,7 +59,7 @@ public class CategoryService : ICategoryService
         var dtos = list.Select(MapToDto).ToList();
 
         await _cache.SetAsync(
-            AllCategoriesCacheKey,
+            CacheKeys.Categories.All,
             dtos,
             TimeSpan.FromMinutes(30));
 
@@ -109,7 +107,7 @@ public class CategoryService : ICategoryService
         await _repository.AddAsync(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(AllCategoriesCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Categories.All);
 
         return MapToDto(entity);
     }
@@ -149,8 +147,11 @@ public class CategoryService : ICategoryService
         _repository.Update(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(entity.Id));
-        await _cache.RemoveAsync(AllCategoriesCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Categories.ById(entity.Id));
+        await _cache.RemoveAsync(CacheKeys.Categories.All);
+
+
+        //await _cache.RemoveAsync(CacheKeys.JobPosts.All);  
 
         return MapToDto(entity);
     }
@@ -173,8 +174,8 @@ public class CategoryService : ICategoryService
         _repository.Delete(entity);
         await _repository.SaveChangesAsync();
 
-        await _cache.RemoveAsync(CacheKey(id));
-        await _cache.RemoveAsync(AllCategoriesCacheKey);
+        await _cache.RemoveAsync(CacheKeys.Categories.ById(id));
+        await _cache.RemoveAsync(CacheKeys.Categories.All);
     }
 
     private static GetCategoryDto MapToDto(Category c)

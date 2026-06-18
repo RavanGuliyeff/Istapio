@@ -1,6 +1,7 @@
 ﻿using Istapio.Application.Exceptions;
 using Istapio.Application.Models.DTOs.Cache;
 using Istapio.Application.Services.External.Interfaces;
+using Istapio.Application.Utilities.Constants;
 using Istapio.Application.Utilities.Enums;
 using Istapio.Domain.Constants;
 
@@ -25,7 +26,7 @@ public sealed class OtpService : IOtpService
     public async Task<string> GenerateAndStoreAsync(
         string email, OtpType type, CancellationToken ct = default)
     {
-        var rateKey = CacheKeys.OtpDailyRate(email);
+        var rateKey = CacheKeys.Otp.DailyRate(email);
         var sentToday = await _cache.GetAsync<byte>(rateKey, ct);
         if (sentToday >= MaxDailyOtp)
             throw new TooManyRequestsException("Bu gün maksimum OTP limitinə çatdınız.");
@@ -46,7 +47,7 @@ public sealed class OtpService : IOtpService
     public async Task<bool> VerifyAsync(
         string email, string code, OtpType type, CancellationToken ct = default)
     {
-        var failKey = CacheKeys.OtpFailCount(email);
+        var failKey = CacheKeys.Otp.FailCount(email);
         var failCount = await _cache.GetAsync<byte>(failKey, ct);
         if (failCount >= MaxFailCount)
             throw new TooManyRequestsException("Çox sayda yanlış cəhd. 15 dəqiqə sonra yenidən cəhd edin.");
@@ -81,8 +82,8 @@ public sealed class OtpService : IOtpService
 
     private static string GetOtpKey(string email, OtpType type) => type switch
     {
-        OtpType.EmailVerification => CacheKeys.EmailVerifyOtp(email),
-        OtpType.PasswordReset => CacheKeys.PasswordResetOtp(email),
+        OtpType.EmailVerification => CacheKeys.Otp.EmailVerify(email),
+        OtpType.PasswordReset => CacheKeys.Otp.PasswordReset(email),
         _ => throw new ArgumentOutOfRangeException(nameof(type))
     };
 

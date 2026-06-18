@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Istapio.API.Controllers.Common;
 using Istapio.Application.Models.DTOs.JobPost;
 using Istapio.Application.Services.Internal.Interfaces;
+using Istapio.Domain.Constants;
 
 namespace Istapio.API.Controllers;
 
@@ -31,7 +33,7 @@ public class JobPostsController : BaseController
     /// <response code="200">Returns the job post</response>
     /// <response code="404">If the job post is not found</response>
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(GetJobPostDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(GetJobPostDetailsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -74,15 +76,17 @@ public class JobPostsController : BaseController
     /// <returns>The newly created job post</returns>
     /// <response code="201">Returns the newly created job post</response>
     /// <response code="400">If the request data is invalid</response>
+    /// <response code="401">If the user is not authenticated</response>
+    [Authorize]
     [HttpPost]
     [ProducesResponseType(typeof(GetJobPostDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Create([FromBody] CreateJobPostDto dto)
     {
         var jobPost = await _jobPostService.CreateAsync(dto);
         return Created(jobPost, "Job post created successfully");
     }
-
 
     /// <summary>
     /// Increments the view count of a job post
@@ -101,17 +105,23 @@ public class JobPostsController : BaseController
     }
 
     /// <summary>
-    /// Updates an existing job post by its identifier
+    /// Updates an existing job post by its identifier.
+    /// Only the owner or an admin/moderator can update a job post.
     /// </summary>
     /// <param name="id">The unique identifier of the job post</param>
     /// <param name="dto">The updated job post data</param>
     /// <returns>The updated job post</returns>
     /// <response code="200">Returns the updated job post</response>
     /// <response code="400">If the ID in route doesn't match the ID in body</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user is not the owner or does not have the required role</response>
     /// <response code="404">If the job post is not found</response>
+    [Authorize]
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(GetJobPostDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateJobPostDto dto)
     {
@@ -123,14 +133,20 @@ public class JobPostsController : BaseController
     }
 
     /// <summary>
-    /// Soft deletes a job post by its identifier
+    /// Soft deletes a job post by its identifier.
+    /// Only the owner or an admin/moderator can delete a job post.
     /// </summary>
     /// <param name="id">The unique identifier of the job post to delete</param>
     /// <returns>No content</returns>
     /// <response code="204">If the job post was successfully deleted</response>
+    /// <response code="401">If the user is not authenticated</response>
+    /// <response code="403">If the user is not the owner or does not have the required role</response>
     /// <response code="404">If the job post is not found</response>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
