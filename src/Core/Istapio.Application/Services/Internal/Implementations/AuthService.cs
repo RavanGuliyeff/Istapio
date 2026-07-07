@@ -239,15 +239,14 @@ public sealed class AuthService : IAuthService
         RefreshTokenDto dto, string ipAddress)
     {
         var existingToken = await _refreshTokenRepo.GetActiveTokenAsync(dto.RefreshToken)
-            ?? throw new UnauthorizedException("Token yanlis, müdd?ti bitib v? ya l?gv olunub.");
+            ?? throw new UnauthorizedException("Token is invalid or expired.");
 
         var user = await _userManager.FindByIdAsync(existingToken.UserId)
-            ?? throw new NotFoundException("Istifad?çi tapilmadi.");
+            ?? throw new NotFoundException("User not found.");
 
         existingToken.RevokedAt = DateTime.UtcNow;
         existingToken.RevokedByIp = ipAddress;
-        existingToken.ReasonRevoked = "Token rotasiyasi";
-
+        existingToken.ReasonRevoked = "Token rotation";
         var newRefreshToken = CreateRefreshToken(
             user.Id,
             ipAddress);
@@ -271,7 +270,7 @@ public sealed class AuthService : IAuthService
 
         token.RevokedAt = DateTime.UtcNow;
         token.RevokedByIp = ipAddress;
-        token.ReasonRevoked = "Istifad?çi çixis etdi.";
+        token.ReasonRevoked = "User log out";
 
         _refreshTokenRepo.Update(token);
         await _refreshTokenRepo.SaveChangesAsync();

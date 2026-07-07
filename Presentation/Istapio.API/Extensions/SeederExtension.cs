@@ -19,8 +19,16 @@ public static class SeederExtension
             var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
+            var dbContext = services.GetRequiredService<AppDbContext>();
+
+
             await RoleSeeder.SeedAsync(roleManager);
             await AdminSeeder.SeedAsync(userManager);
+
+            await CategorySeeder.SeedAsync(dbContext);
+            await SettingSeeder.SeedAsync(dbContext);
+            await SkillSeeder.SeedAsync(dbContext);
+            await VacationTypeSeeder.SeedAsync(dbContext);
         }
         catch (Exception ex)
         {
