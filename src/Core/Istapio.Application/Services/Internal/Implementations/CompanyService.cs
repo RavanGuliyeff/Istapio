@@ -3,7 +3,9 @@ using Istapio.Application.Models.DTOs.Company;
 using Istapio.Application.Services.External.Interfaces;
 using Istapio.Application.Services.Internal.Interfaces;
 using Istapio.Application.Utilities.Constants;
+using Istapio.Domain.Constants;
 using Istapio.Domain.Entities;
+using Istapio.Domain.Interfaces;
 using Istapio.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,11 +15,15 @@ public class CompanyService : ICompanyService
 {
     private readonly ICompanyRepository _repository;
     private readonly ICacheService _cache;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IFileService _fileService;
 
-    public CompanyService(ICompanyRepository repository, ICacheService cache)
+    public CompanyService(ICompanyRepository repository, ICacheService cache, ICurrentUserService currentUserService, IFileService fileService)
     {
         _repository = repository;
         _cache = cache;
+        _currentUserService = currentUserService;
+        _fileService = fileService;
     }
 
     public async Task<GetCompanyDetailsDto> GetByIdAsync(Guid id)
@@ -66,18 +72,26 @@ public class CompanyService : ICompanyService
 
     public async Task<GetCompanyDto> CreateAsync(CreateCompanyDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.UserId))
+        var userId = _currentUserService.UserId;
+        if (string.IsNullOrWhiteSpace(userId))
             throw new ValidationException("UserId is required");
 
-        if (await _repository.AnyAsync(c => c.Name == dto.Name && c.UserId == dto.UserId))
+        if (await _repository.AnyAsync(c => c.Name == dto.Name && c.UserId == userId))
             throw new ConflictException($"Company with name '{dto.Name}' already exists for this user");
+
+        using var stream = dto.Logo.OpenReadStream();
+        var uploadResult = await _fileService.UploadAsync(
+            stream,
+            dto.Logo.FileName,
+            S3Folders.Companies,
+            dto.Logo.ContentType);
 
         Company entity = new Company
         {
             Name = dto.Name,
             Description = dto.Description,
-            LogoUrl = dto.LogoUrl,
-            UserId = dto.UserId
+            LogoUrl = uploadResult.Url,
+            UserId = userId
         };
 
         await _repository.AddAsync(entity);
@@ -89,17 +103,41 @@ public class CompanyService : ICompanyService
 
     public async Task<GetCompanyDto> UpdateAsync(UpdateCompanyDto dto)
     {
+        var userId = _currentUserService.UserId;
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ValidationException("UserId is required");
+
         Company? entity = await _repository.GetByIdAsync(dto.Id, enableTracking: true);
-        if (entity == null)
-            throw new NotFoundException(nameof(Company), dto.Id);
+        if (entity == null || entity.UserId != userId)
+            throw new NotFoundException($"{nameof(Company)} not found or you do not have permission to update it");
 
         if (entity.Name != dto.Name &&
-            await _repository.AnyAsync(c => c.Name == dto.Name && c.UserId == entity.UserId))
-            throw new ConflictException($"Company with name '{dto.Name}' already exists for this user");
+            await _repository.AnyAsync(c => c.Name == dto.Name))
+            throw new ConflictException($"Company with name '{dto.Name}' already exists ");
+
+        if (dto.Logo is not null)
+        {
+            var oldLogoUrl = entity.LogoUrl;
+
+            using var stream = dto.Logo.OpenReadStream();
+            var uploadResult = await _fileService.UploadAsync(
+                stream,
+                dto.Logo.FileName,
+                S3Folders.Companies,
+                dto.Logo.ContentType);
+
+            entity.LogoUrl = uploadResult.Url;
+
+            if (!string.IsNullOrWhiteSpace(oldLogoUrl))
+            {
+                var oldKey = ExtractKeyFromUrl(oldLogoUrl);
+                if (oldKey is not null)
+                    await _fileService.DeleteAsync(oldKey);
+            }
+        }
 
         entity.Name = dto.Name;
         entity.Description = dto.Description;
-        entity.LogoUrl = dto.LogoUrl;
         entity.UpdatedAt = DateTime.UtcNow;
 
         _repository.Update(entity);
@@ -112,15 +150,42 @@ public class CompanyService : ICompanyService
 
     public async Task DeleteAsync(Guid id)
     {
-        Company? entity = await _repository.GetByIdAsync(id, enableTracking: true);
-        if (entity == null)
-            throw new NotFoundException(nameof(Company), id);
+        var userId = _currentUserService.UserId;
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ValidationException("UserId is required");
 
-        await _repository.SoftDeleteAsync(id);
+        Company? entity = await _repository.GetByIdAsync(id, enableTracking: true);
+        if (entity == null || (entity.UserId != userId && !_currentUserService.IsInAnyRole(Roles.SuperAdmin, Roles.Admin, Roles.Moderator)))
+            throw new NotFoundException($"{nameof(Company)} not found or you do not have permission to delete it");
+
+        _repository.Delete(entity);
         await _repository.SaveChangesAsync();
+
+        if (!string.IsNullOrWhiteSpace(entity.LogoUrl))
+        {
+            var key = ExtractKeyFromUrl(entity.LogoUrl);
+            if (key is not null)
+            {
+                try
+                {
+                    await _fileService.DeleteAsync(key);
+                }
+                catch (InvalidOperationException)
+                {
+                    // logging here
+                }
+            }
+        }
 
         await _cache.RemoveAsync(CacheKeys.Companies.ById(id));
         await _cache.RemoveAsync(CacheKeys.Companies.All);
+    }
+
+    private static string? ExtractKeyFromUrl(string url)
+    {
+        // https://{bucket}.s3.{region}.amazonaws.com/{key}
+        var uri = new Uri(url);
+        return uri.AbsolutePath.TrimStart('/');
     }
 
     private static GetCompanyDto MapToDto(Company c)

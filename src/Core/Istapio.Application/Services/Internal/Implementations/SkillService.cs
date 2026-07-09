@@ -36,7 +36,7 @@ public class SkillService : ISkillService
             throw new NotFoundException(nameof(Skill), id);
 
         var dto = MapToDetailsDto(skill);
-        await _cache.SetAsync(CacheKeys.Skills.ById(id), dto, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.Skills.ById(id), dto, TimeSpan.FromMinutes(15));
         return dto;
     }
 
@@ -47,7 +47,7 @@ public class SkillService : ISkillService
 
         var list = await _repository.GetAllAsync();
         var dtos = list.Select(MapToDto).ToList();
-        await _cache.SetAsync(CacheKeys.Skills.All, dtos, TimeSpan.FromMinutes(30));
+        await _cache.SetAsync(CacheKeys.Skills.All, dtos, TimeSpan.FromMinutes(15));
         return dtos;
     }
 

@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -15,6 +18,21 @@ public static class DependencyInjection
         services.AddStackExchangeRedisCache(options =>
         {
             options.Configuration = configuration.GetConnectionString("Redis");
+        });
+
+        services.AddScoped<IAmazonS3>(sp =>
+        {
+            var accessKey = configuration["AWS:AccessKey"];
+            var secretKey = configuration["AWS:SecretKey"];
+            var region = configuration["AWS:Region"];
+
+            var credentials = new BasicAWSCredentials(accessKey, secretKey);
+            var config = new AmazonS3Config
+            {
+                RegionEndpoint = RegionEndpoint.GetBySystemName(region)
+            };
+
+            return new AmazonS3Client(credentials, config);
         });
 
         RegisterServices(services, assembly);
