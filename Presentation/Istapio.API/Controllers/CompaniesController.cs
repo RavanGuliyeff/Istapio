@@ -79,10 +79,11 @@ public class CompaniesController : BaseController
     /// <response code="401">If the user is not authenticated</response>
     [Authorize]
     [HttpPost]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(GetCompanyDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Create([FromBody] CreateCompanyDto dto)
+    public async Task<IActionResult> Create([FromForm] CreateCompanyDto dto)
     {
         var company = await _companyService.CreateAsync(dto);
         return Created(company, "Company created successfully");
@@ -102,12 +103,13 @@ public class CompaniesController : BaseController
     /// <response code="404">If the company is not found</response>
     [Authorize]
     [HttpPut("{id:guid}")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(GetCompanyDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCompanyDto dto)
+    public async Task<IActionResult> Update(Guid id, [FromForm] UpdateCompanyDto dto)
     {
         if (id != dto.Id)
             return BadRequest("ID mismatch");

@@ -44,7 +44,7 @@ public class CategoryService : ICategoryService
         await _cache.SetAsync(
             CacheKeys.Categories.ById(id),
             dto,
-            TimeSpan.FromMinutes(30));
+            TimeSpan.FromMinutes(15));
 
         return dto;
     }
@@ -61,7 +61,7 @@ public class CategoryService : ICategoryService
         await _cache.SetAsync(
             CacheKeys.Categories.All,
             dtos,
-            TimeSpan.FromMinutes(30));
+            TimeSpan.FromMinutes(15));
 
         return dtos;
     }

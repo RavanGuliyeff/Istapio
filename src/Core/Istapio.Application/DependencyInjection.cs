@@ -19,6 +19,7 @@ public static class DependencyInjection
 
         services.Configure<MailSettings>(configuration.GetSection("MailSettings"));
         services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
+        services.Configure<AwsSettings>(configuration.GetSection("AWS"));
 
         services.AddAutoMapper(cfg => cfg.LicenseKey = licenseKey,
             Assembly.GetExecutingAssembly());
